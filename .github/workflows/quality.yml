@@ -1,0 +1,41 @@
+name: Quality
+
+on:
+  push:
+    branches: [main, enhancement/reliable-intelligence]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    name: Source integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Compile Python sources
+        run: python -m compileall -q sploitscan sploitscan.py
+      - name: Archive tracked source for reproducible review
+        run: |
+          git archive --format=tar --output=source.tar HEAD
+          git rev-parse HEAD > source-commit.txt
+          sha256sum source.tar > source.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: source-${{ github.sha }}
+          path: |
+            source.tar
+            source-commit.txt
+            source.sha256
+          retention-days: 7
+          if-no-files-found: error
