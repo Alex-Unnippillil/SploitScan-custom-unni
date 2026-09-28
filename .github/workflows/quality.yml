@@ -1,0 +1,31 @@
+name: Quality
+on:
+  push:
+    branches: [main, feat/defensive-triage]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile source
+        run: python -m compileall -q sploitscan
+      - name: Archive exact source for validation
+        run: git archive --format=zip -o source-snapshot.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-snapshot
+          path: source-snapshot.zip
+          retention-days: 3
